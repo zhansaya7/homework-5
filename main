@@ -1,94 +1,279 @@
+import java.io.*;
 import java.util.*;
 
-public class PrototypeGameDemo {
 
-    static class Skill implements Cloneable {
-        String name;
 
-        public Skill(String name) { this.name = name; }
 
-        public Skill clone() {
-            return new Skill(name);
-        }
 
-        public String toString() { return name; }
+
+class ConfigurationManager {
+
+    private static volatile ConfigurationManager instance;
+    private Map<String, String> settings = new HashMap<>();
+
+    // private constructor
+    private ConfigurationManager() {
+        System.out.println("ConfigurationManager created!");
     }
 
-    static class Weapon implements Cloneable {
-        String name;
-        int damage;
-
-        public Weapon(String name, int damage) {
-            this.name = name;
-            this.damage = damage;
+    // Thread-safe Singleton
+    public static ConfigurationManager getInstance() {
+        if (instance == null) {
+            synchronized (ConfigurationManager.class) {
+                if (instance == null) {
+                    instance = new ConfigurationManager();
+                }
+            }
         }
-
-        public Weapon clone() {
-            return new Weapon(name, damage);
-        }
+        return instance;
     }
 
-    static class Armor implements Cloneable {
-        String name;
-        int defense;
-
-        public Armor(String name, int defense) {
-            this.name = name;
-            this.defense = defense;
-        }
-
-        public Armor clone() {
-            return new Armor(name, defense);
-        }
+    public void setSetting(String key, String value) {
+        settings.put(key, value);
     }
 
-    static class Character implements Cloneable {
-        int health;
-        int strength;
-        Weapon weapon;
-        Armor armor;
-        List<Skill> skills = new ArrayList<>();
-
-        public Character(int health, int strength, Weapon weapon, Armor armor) {
-            this.health = health;
-            this.strength = strength;
-            this.weapon = weapon;
-            this.armor = armor;
+    public String getSetting(String key) {
+        if (!settings.containsKey(key)) {
+            throw new RuntimeException("Setting not found!");
         }
-
-        public void addSkill(Skill skill) {
-            skills.add(skill);
-        }
-
-        public Character clone() {
-            Character clone = new Character(
-                    health,
-                    strength,
-                    weapon.clone(),
-                    armor.clone()
-            );
-            for (Skill s : skills)
-                clone.addSkill(s.clone());
-            return clone;
-        }
-
-        public void show() {
-            System.out.println("HP: " + health + " STR: " + strength);
-            System.out.println("Skills: " + skills);
-        }
+        return settings.get(key);
     }
 
-    public static void main(String[] args) {
+    public void saveToFile(String filename) throws IOException {
+        BufferedWriter writer = new BufferedWriter(new FileWriter(filename));
+        for (Map.Entry<String, String> entry : settings.entrySet()) {
+            writer.write(entry.getKey() + "=" + entry.getValue());
+            writer.newLine();
+        }
+        writer.close();
+    }
 
-        Weapon sword = new Weapon("Sword", 50);
-        Armor armor = new Armor("Steel Armor", 30);
+    public void loadFromFile(String filename) throws IOException {
+        BufferedReader reader = new BufferedReader(new FileReader(filename));
+        String line;
+        while ((line = reader.readLine()) != null) {
+            String[] parts = line.split("=");
+            if (parts.length == 2) {
+                settings.put(parts[0], parts[1]);
+            }
+        }
+        reader.close();
+    }
+}
 
-        Character warrior = new Character(100, 20, sword, armor);
-        warrior.addSkill(new Skill("Slash"));
-        warrior.addSkill(new Skill("Block"));
 
-        Character clone = warrior.clone();
 
-        clone.show();
+
+
+
+
+
+
+class Report {
+    String header;
+    String content;
+    String footer;
+
+    public void show() {
+        System.out.println(header);
+        System.out.println(content);
+        System.out.println(footer);
+    }
+}
+
+interface IReportBuilder {
+    void setHeader(String header);
+    void setContent(String content);
+    void setFooter(String footer);
+    Report getReport();
+}
+
+class TextReportBuilder implements IReportBuilder {
+    private Report report = new Report();
+
+    public void setHeader(String header) {
+        report.header = "TEXT HEADER: " + header;
+    }
+
+    public void setContent(String content) {
+        report.content = content;
+    }
+
+    public void setFooter(String footer) {
+        report.footer = "TEXT FOOTER: " + footer;
+    }
+
+    public Report getReport() {
+        return report;
+    }
+}
+
+class HtmlReportBuilder implements IReportBuilder {
+    private Report report = new Report();
+
+    public void setHeader(String header) {
+        report.header = "<h1>" + header + "</h1>";
+    }
+
+    public void setContent(String content) {
+        report.content = "<p>" + content + "</p>";
+    }
+
+    public void setFooter(String footer) {
+        report.footer = "<footer>" + footer + "</footer>";
+    }
+
+    public Report getReport() {
+        return report;
+    }
+}
+
+class ReportDirector {
+    public void constructReport(IReportBuilder builder) {
+        builder.setHeader("2026 Report");
+        builder.setContent("This is report content.");
+        builder.setFooter("End of report");
+    }
+}
+
+
+
+
+
+
+
+
+class Product implements Cloneable {
+    String name;
+    double price;
+    int quantity;
+
+    public Product(String name, double price, int quantity) {
+        this.name = name;
+        this.price = price;
+        this.quantity = quantity;
+    }
+
+    public Product clone() {
+        return new Product(name, price, quantity);
+    }
+
+    public String toString() {
+        return name + " x" + quantity + " ($" + price + ")";
+    }
+}
+
+class Discount implements Cloneable {
+    String description;
+    double amount;
+
+    public Discount(String description, double amount) {
+        this.description = description;
+        this.amount = amount;
+    }
+
+    public Discount clone() {
+        return new Discount(description, amount);
+    }
+
+    public String toString() {
+        return description + " (-$" + amount + ")";
+    }
+}
+
+class Order implements Cloneable {
+    List<Product> products = new ArrayList<>();
+    List<Discount> discounts = new ArrayList<>();
+    double deliveryCost;
+    String paymentMethod;
+
+    public void addProduct(Product product) {
+        products.add(product);
+    }
+
+    public void addDiscount(Discount discount) {
+        discounts.add(discount);
+    }
+
+    public Order clone() {
+        Order cloned = new Order();
+        for (Product p : products) {
+            cloned.products.add(p.clone());
+        }
+        for (Discount d : discounts) {
+            cloned.discounts.add(d.clone());
+        }
+        cloned.deliveryCost = deliveryCost;
+        cloned.paymentMethod = paymentMethod;
+        return cloned;
+    }
+
+    public void show() {
+        System.out.println("Products:");
+        for (Product p : products) {
+            System.out.println("  " + p);
+        }
+        System.out.println("Discounts:");
+        for (Discount d : discounts) {
+            System.out.println("  " + d);
+        }
+        System.out.println("Delivery: $" + deliveryCost);
+        System.out.println("Payment: " + paymentMethod);
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+public class Main {
+    public static void main(String[] args) throws Exception {
+
+        System.out.println("===== SINGLETON TEST =====");
+        Runnable task = () -> {
+            ConfigurationManager config = ConfigurationManager.getInstance();
+            System.out.println(config.hashCode());
+        };
+
+        Thread t1 = new Thread(task);
+        Thread t2 = new Thread(task);
+        t1.start();
+        t2.start();
+        t1.join();
+        t2.join();
+
+        System.out.println("\n===== BUILDER TEST =====");
+        ReportDirector director = new ReportDirector();
+
+        IReportBuilder textBuilder = new TextReportBuilder();
+        director.constructReport(textBuilder);
+        textBuilder.getReport().show();
+
+        System.out.println();
+
+        IReportBuilder htmlBuilder = new HtmlReportBuilder();
+        director.constructReport(htmlBuilder);
+        htmlBuilder.getReport().show();
+
+        System.out.println("\n===== PROTOTYPE TEST =====");
+        Order order1 = new Order();
+        order1.addProduct(new Product("Laptop", 1200, 1));
+        order1.addProduct(new Product("Mouse", 25, 2));
+        order1.addDiscount(new Discount("New Year", 50));
+        order1.deliveryCost = 20;
+        order1.paymentMethod = "Credit Card";
+
+        System.out.println("Original Order:");
+        order1.show();
+
+        System.out.println("\nCloned Order:");
+        Order order2 = order1.clone();
+        order2.show();
     }
 }
